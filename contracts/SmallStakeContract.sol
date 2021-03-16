@@ -1,6 +1,6 @@
 pragma solidity >0.4.99 <0.6.0;
 
-import './interfaces/RootChainPoSWStaking.sol'
+import './RootChainPoSWStaking.sol'
 
 contract SmallStakeContract {
     address private signer;
