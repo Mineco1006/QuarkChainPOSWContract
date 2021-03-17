@@ -1,12 +1,17 @@
 pragma solidity >0.4.99 <0.6.0;
 
 import './RootChainPoSWStaking.sol';
+import './interfaces/SafeMath.sol';
 
 contract SmallStakeContract {
+
+    using SafeMath for uint256;
+
+
     address private signer;
     address payable private constant stakingContract = 0x514b430000000000000000000000000000000001;
-    address payable public constant miner = 0x0;
-    address payable public constant owner = 0x0;
+    address payable public constant miner = 0xdfe9A918B553D5BFa4Aa6A1DBa16d5286Bf00fa1;
+    address payable public owner;
 
     address[] user;
 
@@ -29,11 +34,12 @@ contract SmallStakeContract {
     constructor() public {
         signer = address(this);
         StakingContract.setSigner(signer);
+        owner = msg.sender;
     }
 
     function calculateRewards() internal {
         uint256 _minerFee = msg.value*minerFee/10000;
-        uint256 _ownerFee = msg.value*ownerFee/10000;
+        uint256 _ownerFee = msg.value.mul(ownerFee).div(10000);
             miner.transfer(_minerFee);
             owner.transfer(_ownerFee);
 
@@ -60,15 +66,16 @@ contract SmallStakeContract {
     }
 
     function unlock() public {
+        require(msg.sender == owner || msg.sender == miner);
         StakingContract.unlock();
-        withdrawableTimeStamp = block.timestamp + 3 days;
+        withdrawableTimeStamp = block.timestamp.add(3 days);
     }
     
     function lock() public {
         StakingContract.lock();
     }
 
-    function pushStakesToContract(uint256 amount) public {
+    function pushStakesToContract(uint256 amount) public payable {
         require(poolStakes > 1000000*10**18);
         stakingContract.transfer(amount);
     }
@@ -78,7 +85,7 @@ contract SmallStakeContract {
         StakingContract.withdraw(amount);
     }
 
-    function withdrawAllStakesFromStakingContract() public {
+    function withdrawAllStakesFromStakingContract() public view {
         require(msg.sender == owner);
         StakingContract.withdrawAll;
     }
