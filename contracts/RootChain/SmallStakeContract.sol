@@ -64,7 +64,7 @@ contract SmallStakeContract {
             poolStakes += msg.value;
 
             if(address(this).balance >= 1000000 ether){
-                pushStakesToContractInternal(address(this).balance.div(1000000 ether).mul(1000000 ether));
+                transferStakesToContractInternal(address(this).balance.div(1000000 ether).mul(1000000 ether));
             }
         }
     }
@@ -79,19 +79,19 @@ contract SmallStakeContract {
         StakingContract.lock();
     }
 
-    function pushStakesToContract(uint256 amount) public {
+    function transferStakesToContract(uint256 amount) public {
         require(msg.sender == owner || msg.sender == miner);
         require(poolStakes > 1000000 ether);
-        stakingContract.transfer(amount);
+        stakingContract.call.value(amount)("");
     }
 
-    function pushStakesToContractInternal(uint256 amount) internal {
+    function transferStakesToContractInternal(uint256 amount) internal {
         require(poolStakes > 1000000 ether);
-        address(stakingContract).transfer(amount);
+        stakingContract.call.value(amount)("");
     }
 
 
-    function withdrawStakesFromRootContract(uint256 amount) public {
+    function withdrawStakesFromRootContract(uint256 amount) public payable {
         require(userStakes[msg.sender].add(userRewards[msg.sender]) >= amount);
         StakingContract.withdraw(amount);
     }
@@ -101,9 +101,10 @@ contract SmallStakeContract {
         msg.sender.transfer(amount);
     }
 
-    function withdrawAllStakesFromRootContract() public view {
+    function withdrawAllStakesFromRootContract() public payable {
         require(msg.sender == owner);
-        StakingContract.withdrawAll;
+        StakingContract.withdrawAll();
+        //stakingContract.call(abi.encodeWithSignature("withdrawAll()"));
     }
 
     function distributeAllRewardsToStakers() public {
