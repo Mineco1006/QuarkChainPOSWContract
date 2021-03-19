@@ -1,6 +1,6 @@
 pragma solidity >0.4.99 <0.6.0;
 
-import './RootChainPoSWStaking.sol';
+import '../interfaces/IRootChainPoSWStaking.sol';
 import '../interfaces/SafeMath.sol';
 
 contract SmallStakeContract {
@@ -28,7 +28,7 @@ contract SmallStakeContract {
     uint256 public withdrawableTimeStamp;
     
 
-    RootChainPoSWStaking StakingContract = RootChainPoSWStaking(stakingContract);
+    IRootChainPoSWStaking StakingContract = IRootChainPoSWStaking(stakingContract);
 
     constructor() public {
         signer = address(this);
@@ -94,6 +94,7 @@ contract SmallStakeContract {
     function withdrawStakesFromRootContract(uint256 amount) public payable {
         require(userStakes[msg.sender].add(userRewards[msg.sender]) >= amount);
         StakingContract.withdraw(amount);
+        //stakingContract.call(abi.encodeWithSignature("withdraw(uint256)", amount));
     }
 
     function withdrawStakes(uint256 amount) public {
