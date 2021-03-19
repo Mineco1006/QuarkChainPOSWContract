@@ -22,24 +22,18 @@ contract SideChainSmallStakeContract {
 
     constructor() public {
         owner = msg.sender;
+        user.push(msg.sender);
+        user.push(miner);
     }
 
-    function updateRewards() public payable {
-        require(totalStakes <= address(this).balance);
-        uint256 dividend = address(this).balance.sub(msg.value).sub(totalStakes);
-
-        if(dividend > 0){
-            uint256 _minerFee = dividend.mul(minerFee).div(10000);
-            uint256 _poolFee = dividend.mul(poolFee).div(10000);
-            userStakeWithRewards[miner] += _minerFee;
-            userStakeWithRewards[owner] += _poolFee;
-
-            uint256 adjustedValue = dividend.sub(_minerFee.add(_poolFee));
-
-            for(uint16 i; i < user.length; i++) {
-                userStakeWithRewards[user[i]] += userStakeWithRewards[user[i]].mul(10**18).div(totalStakes).mul(adjustedValue).div(10**18);
-            }
+    function getStakesWithRewards(address staker) public view returns (uint256) {
+        if (totalStakes == 0) {
+            return 0;
         }
+        uint256 dividend = address(this).balance.sub(totalStakes);
+        uint256 adjustedValue = dividend.sub(dividend.mul(minerFee + poolFee).div(10000));
+        uint256 reward = userStakeWithRewards[staker].mul(adjustedValue).div(totalStakes);
+        return userStakeWithRewards[staker].add(reward);
     }
 
     function () external payable {
@@ -47,7 +41,7 @@ contract SideChainSmallStakeContract {
         require(isClosed == false, 'Pool is closed');
 
         if(userStakeWithRewards[msg.sender] == 0) {
-            require(msg.value >= 20000 ether);
+            require(msg.value >= 10 ether);
             user.push(msg.sender);
         }
 
@@ -56,19 +50,10 @@ contract SideChainSmallStakeContract {
     }
 
     function withdrawStakes(uint256 amount) public {
-        require(userStakeWithRewards[msg.sender] >= amount);
+        require(getStakesWithRewards(msg.sender) >= amount);
+        updateRewards();
         msg.sender.transfer(amount);
         totalStakes -= amount;
-    }
-
-    function flushContract() public {
-        require(msg.sender == owner);
-        updateRewards();
-        for(uint16 i; i < user.length; i++) {
-            user[i].transfer(userStakeWithRewards[user[i]]);
-            userStakeWithRewards[user[i]] = 0;
-        }
-        isClosed = true;
     }
 
     //Miner functions
@@ -95,5 +80,39 @@ contract SideChainSmallStakeContract {
         require(amount <= 500);
         updateRewards();
         poolFee = amount;
+    }
+
+    function flushContract() public {
+        require(msg.sender == owner);
+        updateRewards();
+        for(uint16 i; i < user.length; i++) {
+            user[i].transfer(userStakeWithRewards[user[i]]);
+            userStakeWithRewards[user[i]] = 0;
+        }
+        isClosed = true;
+    }
+
+    //Private functions
+    function updateRewards() private {
+        require(totalStakes <= address(this).balance);
+
+        uint256 dividend = address(this).balance.sub(msg.value).sub(totalStakes);
+
+        if(dividend == 0){
+            return;
+        } else {
+            uint256 _minerFee = dividend.mul(minerFee).div(10000);
+            uint256 _poolFee = dividend.mul(poolFee).div(10000);
+
+            uint256 adjustedValue = dividend.sub(_minerFee).sub(_poolFee);
+
+            for(uint16 i; i < user.length; i++) {
+                uint256 reward = adjustedValue.mul(userStakeWithRewards[user[i]]).div(totalStakes);
+                userStakeWithRewards[user[i]] += reward;
+            }
+
+            userStakeWithRewards[miner] += _minerFee;
+            userStakeWithRewards[owner] += _poolFee;
+        }
     }
 }
