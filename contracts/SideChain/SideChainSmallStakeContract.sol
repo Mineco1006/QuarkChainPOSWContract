@@ -1,6 +1,6 @@
-pragma solidity >0.4.99 <0.6.0;
+pragma solidity ^0.7.4;
 
-import '../interfaces/SafeMath.sol';
+import '../libraries/SafeMath.sol';
 
 contract SideChainSmallStakeContract {
 
@@ -13,36 +13,53 @@ contract SideChainSmallStakeContract {
 
     uint16 public poolFee;
 
-    bool isClosed;
+    bool public isClosed;
 
-    address payable[] public user;
+    address payable[] private user;
+    mapping(address => uint256) private userArrPos;
 
+    uint256 public minStake;
     uint256 public totalStakes;
-    mapping(address => uint256) public userStakeWithRewards;
+    mapping(address => uint256) private userStakeWithRewards;
 
-    constructor() public {
+    constructor() {
         owner = msg.sender;
         user.push(msg.sender);
         user.push(miner);
+        userArrPos[miner] = 1;
     }
 
     function getStakesWithRewards(address staker) public view returns (uint256) {
-        if (totalStakes == 0) {
+        address contractAddress = address(this);
+
+        if(totalStakes == 0) {
             return 0;
         }
-        uint256 dividend = address(this).balance.sub(totalStakes);
+        
+        uint256 dividend = contractAddress.balance.sub(totalStakes);
         uint256 adjustedValue = dividend.sub(dividend.mul(minerFee + poolFee).div(10000));
         uint256 reward = userStakeWithRewards[staker].mul(adjustedValue).div(totalStakes);
+
+        if(staker == owner) {
+            reward += dividend.mul(poolFee).div(10000);
+        }
+        if(staker == miner) {
+            reward += dividend.mul(minerFee).div(10000);
+        }
         return userStakeWithRewards[staker].add(reward);
     }
 
-    function () external payable {
-        updateRewards();
+    receive() external payable {
         require(isClosed == false, 'Pool is closed');
 
-        if(userStakeWithRewards[msg.sender] == 0) {
-            require(msg.value >= 10 ether);
-            user.push(msg.sender);
+        calculateRewards();
+
+        if(msg.sender != miner || msg.sender != owner){
+            if(userStakeWithRewards[msg.sender] == 0) {
+                require(msg.value >= minStake);
+                user.push(msg.sender);
+                userArrPos[msg.sender] = user.length.sub(1);
+            }
         }
 
         userStakeWithRewards[msg.sender] += msg.value;
@@ -51,16 +68,22 @@ contract SideChainSmallStakeContract {
 
     function withdrawStakes(uint256 amount) public {
         require(getStakesWithRewards(msg.sender) >= amount);
-        updateRewards();
+        calculateRewards();
+        require(userStakeWithRewards[msg.sender] >= amount);
         msg.sender.transfer(amount);
+        userStakeWithRewards[msg.sender] -= amount;
         totalStakes -= amount;
+
+        if(userStakeWithRewards[msg.sender] == 0) {
+            delete user[userArrPos[msg.sender]];
+        }
     }
 
     //Miner functions
     function adjustMinerFee(uint16 amount) public {
         require(msg.sender == owner || msg.sender == miner);
-        require(minerFee <= 4000);
-        updateRewards();
+        require(amount <= 4000);
+        calculateRewards();
         minerFee = amount;
     }
 
@@ -75,32 +98,38 @@ contract SideChainSmallStakeContract {
         isClosed = status;
     }
 
+    function adjustMinStake(uint256 _minStake) public {
+        require(msg.sender == owner);
+        minStake = _minStake;
+    }
+
     function adjustPoolFee(uint16 amount) public {
         require(msg.sender == owner);
         require(amount <= 500);
-        updateRewards();
+        calculateRewards();
         poolFee = amount;
     }
 
     function flushContract() public {
         require(msg.sender == owner);
-        updateRewards();
+        calculateRewards();
         for(uint16 i; i < user.length; i++) {
             user[i].transfer(userStakeWithRewards[user[i]]);
             userStakeWithRewards[user[i]] = 0;
+            delete user[i];
         }
+        totalStakes = 0;
         isClosed = true;
     }
 
-    //Private functions
-    function updateRewards() private {
-        require(totalStakes <= address(this).balance);
+    //Internal functions
+    function calculateRewards() internal {
 
-        uint256 dividend = address(this).balance.sub(msg.value).sub(totalStakes);
+        address contractAddress = address(this);
+        
+        if(contractAddress.balance.sub(msg.value).sub(totalStakes) > 0){
 
-        if(dividend == 0){
-            return;
-        } else {
+            uint256 dividend = contractAddress.balance.sub(msg.value).sub(totalStakes);
             uint256 _minerFee = dividend.mul(minerFee).div(10000);
             uint256 _poolFee = dividend.mul(poolFee).div(10000);
 
@@ -110,6 +139,7 @@ contract SideChainSmallStakeContract {
                 uint256 reward = adjustedValue.mul(userStakeWithRewards[user[i]]).div(totalStakes);
                 userStakeWithRewards[user[i]] += reward;
             }
+            totalStakes += dividend;
 
             userStakeWithRewards[miner] += _minerFee;
             userStakeWithRewards[owner] += _poolFee;
