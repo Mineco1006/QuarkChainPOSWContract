@@ -35,7 +35,7 @@ contract SideChainSmallStakeContract {
         if(totalStakes == 0) {
             return 0;
         }
-        
+
         uint256 dividend = contractAddress.balance.sub(totalStakes);
         uint256 adjustedValue = dividend.sub(dividend.mul(minerFee + poolFee).div(10000));
         uint256 reward = userStakeWithRewards[staker].mul(adjustedValue).div(totalStakes);
@@ -54,14 +54,15 @@ contract SideChainSmallStakeContract {
 
         calculateRewards();
 
-        if(msg.sender != miner || msg.sender != owner){
-            if(userStakeWithRewards[msg.sender] == 0) {
-                require(msg.value >= minStake);
-                user.push(msg.sender);
-                userArrPos[msg.sender] = user.length.sub(1);
+        if(msg.sender != user[0]) {
+            if(msg.sender != user[1]) {
+                if(userStakeWithRewards[msg.sender] == 0) {
+                    require(msg.value >= minStake);
+                    user.push(msg.sender);
+                    userArrPos[msg.sender] = user.length.sub(1);
+                }
             }
         }
-
         userStakeWithRewards[msg.sender] += msg.value;
         totalStakes += msg.value;
     }
@@ -74,8 +75,12 @@ contract SideChainSmallStakeContract {
         userStakeWithRewards[msg.sender] -= amount;
         totalStakes -= amount;
 
-        if(userStakeWithRewards[msg.sender] == 0) {
-            delete user[userArrPos[msg.sender]];
+        if(msg.sender != user[0]) {
+            if(msg.sender != user[1]) {
+                if(userStakeWithRewards[msg.sender] == 0) {
+                    delete user[userArrPos[msg.sender]];
+                }
+            }
         }
     }
 
