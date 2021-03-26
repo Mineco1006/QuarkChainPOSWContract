@@ -87,7 +87,7 @@ contract SideChainSmallStakeContract {
     //Miner functions
     function adjustMinerFee(uint16 amount) public {
         require(msg.sender == owner || msg.sender == miner);
-        require(amount <= 4000);
+        require(amount <= 9000);
         calculateRewards();
         minerFee = amount;
     }
