@@ -34,7 +34,6 @@ contract RootChainPoSWStaking {
         require(!stake.unlocked, "should only add stakes in locked state");
 
         addStakes(stake, msg.value);
-
     }
 
     function lock() public payable {
@@ -54,7 +53,7 @@ contract RootChainPoSWStaking {
         stake.withdrawableTimestamp = now + LOCK_DURATION;
     }
 
-    function withdraw(uint256 amount) public {
+    function withdraw(uint256 memory amount) public {
         Stake storage stake = stakes[msg.sender];
         require(stake.unlocked && now >= stake.withdrawableTimestamp);
         require(amount <= stake.amount);

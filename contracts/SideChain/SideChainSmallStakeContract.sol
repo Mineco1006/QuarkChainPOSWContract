@@ -6,7 +6,7 @@ contract SideChainSmallStakeContract {
 
     using SafeMath for uint256;
 
-    address payable public miner = 0xdfe9A918B553D5BFa4Aa6A1DBa16d5286Bf00fa1;
+    address payable public miner = 0xe94E8362A0A033C04860024afeb384Dd395F5a4f;
     address payable public owner;
 
     uint16 public minerFee;
