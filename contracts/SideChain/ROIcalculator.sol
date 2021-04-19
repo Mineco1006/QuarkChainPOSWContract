@@ -1,6 +1,12 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
+import '../libraries/SafeMath.sol';
+
 contract ROIcalculator {
+
+    using SafeMath for uint256;
+
     address stakingPool;
 
     uint256 public timestamp1;
@@ -9,8 +15,8 @@ contract ROIcalculator {
 
     mapping(uint256 => uint256) public snapshotBalance;
 
-    constructor(address _stakingPool) {
-        stakingPool = _stakingPool;
+    constructor() {
+        stakingPool = 0x94f151BBD12854f93cf92c882B88E3790F407956;
     }
 
     function takeNewSnapshot(uint16 snapshotNumber) public {
@@ -48,6 +54,6 @@ contract ROIcalculator {
             _snapshotBalance = snapshotBalance[timestamp3];
         }
 
-        return ((((currentBalance - _snapshotBalance) * 10 ether)/(currentBalance))/(((block.timestamp/ 1 minutes) - (timestamp/ 1 minutes))*(30 days/ 1 minutes)));
+        return (currentBalance.sub(_snapshotBalance).mul(1 ether).div(currentBalance)).div(block.timestamp.sub(timestamp)).mul(30 days);
     }
 }

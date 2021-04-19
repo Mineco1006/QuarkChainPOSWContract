@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
 import '../libraries/SafeMath.sol';
 
-contract SideChainSmallStakeContract {
+contract SideChainSmallStakeContractV2 {
 
     using SafeMath for uint256;
 
@@ -88,13 +87,6 @@ contract SideChainSmallStakeContract {
         }
     }
 
-    function getROI() public view returns(uint256){
-        address contractAddress = address(this);
-        uint256 currentBalance = contractAddress.balance;
-
-        return (currentBalance.sub(snapshotBalance).mul(1 ether).div(currentBalance)).div(block.timestamp.sub(snapshotTimestamp)).mul(30 days);
-    }
-
     //Miner functions
     function adjustMinerFee(uint16 amount) public {
         require(msg.sender == owner || msg.sender == miner);
@@ -162,5 +154,12 @@ contract SideChainSmallStakeContract {
             userStakeWithRewards[miner] += _minerFee;
             userStakeWithRewards[owner] += _poolFee;
         }
+    }
+    
+    function ROI() public view returns(uint256){
+        address contractAddress = address(this);
+        uint256 currentBalance = contractAddress.balance;
+
+        return (currentBalance.sub(snapshotBalance).mul(1 ether).div(currentBalance)).div(block.timestamp.sub(snapshotTimestamp)).mul(30 days);
     }
 }
