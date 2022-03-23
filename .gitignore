@@ -1,2 +1,3 @@
 poswcontract.code-workspace
-./bin
+node_modules
+bin
