@@ -59,14 +59,10 @@ contract StakingPoolV2 is Ownable, IStakingPoolV2 {
     }
 
     function deposit() public payable override {
-        if(msg.sender != user[0]) {
-            if(msg.sender != user[1]) {
-                if(userStake[msg.sender] == 0) {
-                    require(msg.value >= minStake);
-                    user.push(payable(msg.sender));
-                    userArrPos[msg.sender] = user.length - 1;
-                }
-            }
+        if(msg.sender != user[0] && msg.sender != user[1] && userStake[msg.sender] == 0) {
+            require(msg.value >= minStake);
+            user.push(payable(msg.sender));
+            userArrPos[msg.sender] = user.length - 1;
         }
         userStake[msg.sender] += msg.value;
         totalStake += msg.value;
@@ -80,13 +76,7 @@ contract StakingPoolV2 is Ownable, IStakingPoolV2 {
         userStake[msg.sender] -= amount;
         totalStake -= amount;
 
-        if(msg.sender != user[0]) {
-            if(msg.sender != user[1]) {
-                if(userStake[msg.sender] == 0) {
-                    delete user[userArrPos[msg.sender]];
-                }
-            }
-        }
+        if(msg.sender != user[0] && msg.sender != user[1] && userStake[msg.sender] == 0) delete user[userArrPos[msg.sender]];
     }
 
     function getPoolStats() public view override returns(PoolStats memory) {
